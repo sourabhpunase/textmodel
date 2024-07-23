@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: App.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: App.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import React, { useState } from 'react';
+import './App.css';
+import { LampDemo } from './assets/Lamp';
+
+/**
+ * App component for text embedding and auto-completion.
+ * @returns {JSX.Element} The rendered App component.
+ */
+function App() {
+    const [text, setText] = useState('');
+    const [question, setQuestion] = useState('');
+    const [prefix, setPrefix] = useState('');
+    const [embeddings, setEmbeddings] = useState(null);
+    const [answer, setAnswer] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    /**
+     * Handle embedding request.
+     * @param {React.FormEvent&lt;HTMLFormElement>} e - The form event.
+     */
+    const handleEmbeddings = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        setEmbeddings(null);
+
+        try {
+            const response = await fetch('http://localhost:3000/embed', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Server response was not ok');
+            }
+
+            const data = await response.json();
+            setEmbeddings(data.embeddings);
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * Handle answer request.
+     * @param {React.FormEvent&lt;HTMLFormElement>} e - The form event.
+     */
+    const handleAnswer = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        setAnswer('');
+
+        try {
+            const response = await fetch('http://localhost:3000/answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ question }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Server response was not ok');
+            }
+
+            const data = await response.json();
+            setAnswer(data.answer);
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * Handle autocomplete request.
+     * @param {React.ChangeEvent&lt;HTMLInputElement>} e - The input change event.
+     */
+    const handleAutocomplete = async (e) => {
+        setPrefix(e.target.value);
+        setIsLoading(true);
+        setError(null);
+        setSuggestions([]);
+
+        try {
+            const response = await fetch('http://localhost:3000/autocomplete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prefix: e.target.value }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Server response was not ok');
+            }
+
+            const data = await response.json();
+            setSuggestions(data.suggestions);
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * Handle suggestion click.
+     * @param {string} suggestion - The selected suggestion.
+     */
+    const handleSuggestionClick = (suggestion) => {
+        setPrefix(suggestion);
+        setSuggestions([]);
+    };
+
+    return (
+        &lt;div >
+            &lt;div className='App'>
+                &lt;h1>Text Embedding and Auto-completion&lt;/h1>
+                &lt;form onSubmit={handleAnswer}>
+                    &lt;h2>Ask what's capital of france or India ?&lt;/h2>
+                    &lt;input
+                        type="text"
+                        value={question}
+                        onChange={(e) => setQuestion(e.target.value)}
+                        placeholder="Enter your question"
+                    />
+                    &lt;button type="submit" disabled={isLoading}>Get Answer&lt;/button>
+                    {isLoading &amp;&amp; &lt;p>Loading...&lt;/p>}
+                    {error &amp;&amp; &lt;p className="error">{error}&lt;/p>}
+                    {answer &amp;&amp; &lt;p>Answer: {answer}&lt;/p>}
+                &lt;/form>
+                &lt;form onSubmit={handleEmbeddings}>
+                    &lt;h2>Get Embeddings&lt;/h2>
+                    &lt;input
+                        type="text"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        placeholder="Enter text for embedding"
+                    />
+                    &lt;button type="submit" disabled={isLoading}>Get Embedding&lt;/button>
+                    {isLoading &amp;&amp; &lt;p>Loading...&lt;/p>}
+                    {error &amp;&amp; &lt;p className="error">{error}&lt;/p>}
+                    {embeddings &amp;&amp; &lt;p>Embeddings: {JSON.stringify(embeddings)}&lt;/p>}
+                &lt;/form>
+                &lt;div>
+                    &lt;h2>Auto-complete&lt;/h2>
+                    &lt;input
+                        type="text"
+                        value={prefix}
+                        onChange={handleAutocomplete}
+                        placeholder="Start typing..."
+                    />
+                    {isLoading &amp;&amp; &lt;p>Loading...&lt;/p>}
+                    {error &amp;&amp; &lt;p className="error">{error}&lt;/p>}
+                    {suggestions.length > 0 &amp;&amp; (
+                        &lt;ul>
+                            {suggestions.map((suggestion, index) => (
+                                &lt;li key={index} onClick={() => handleSuggestionClick(suggestion)}>
+                                    {suggestion}
+                                &lt;/li>
+                            ))}
+                        &lt;/ul>
+                    )}
+                &lt;/div>
+            &lt;/div>
+            &lt;LampDemo/>
+        &lt;/div>
+    );
+}
+
+export default App;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#App">App</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Mon Jul 22 2024 17:53:53 GMT+0530 (India Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
